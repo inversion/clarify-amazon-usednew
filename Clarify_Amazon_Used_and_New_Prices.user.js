@@ -8,8 +8,9 @@
 // @grant none
 // ==/UserScript==
 
+// Disclaimer: Neither the author or script are in any way affiliated with Amazon.com, Inc.
+
 jQuery(document).ready(function($) {
-	// TODO: Take a less ad-hoc i18n approach
 	// Match the tld of current amazon sites, does not currently function for jp and cn
 	var tldRegex = /www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/;
 	// Check whether to use dot separated decimal float values or the european comma separated style
