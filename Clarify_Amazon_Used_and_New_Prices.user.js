@@ -2,9 +2,9 @@
 // @name        Clarify Amazon Used and New Prices
 // @require     http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js
 // @namespace   471461
-// @description Update the price for 'used and new' items on the product page to include delivery/p&p. Also shows each seller's full price (including delivery/p&p) on the Amazon 'used and new' tab when opened.
-// @include     /^https?://www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/((gp/(offer-listing|product)/)|(.+?/dp/.+?/)).*$/
-// @version     1
+// @description Update the price for 'used and new' items on the product page to include delivery/p&p. Shows each seller's full price (including delivery/p&p) on the Amazon 'used and new' tab. Shows real prices in search results.
+// @include     /^https?://www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/((gp/(offer-listing|product)/)|(.+?/dp/.+?/|dp)|s/).*$/
+// @version     2
 // @grant none
 // ==/UserScript==
 
@@ -14,13 +14,80 @@ jQuery(document).ready(function($) {
 	// Match the tld of current amazon sites, does not currently function for jp and cn
 	var tldRegex = /www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/;
 	// Check whether to use dot separated decimal float values or the european comma separated style
-	var isDotFloats = typeof tldRegex.exec(window.location.host)[3] === "undefined"; 
+	var isDotFloats = typeof tldRegex.exec(window.location.host)[3] === "undefined";
+	// Identifier stem for certain page elements added by this script
+	var clarifyStem = 'clarify_grease_';
+	// Regex to match the used and new page containing prices for a specific condition
+	var usedNewUrlRegex = /^.*?\/gp\/offer-listing\/(.+?)\/.+condition=([^&]+)/;
 	
-	// On a product page or the 'used and new' tabs page?
+	// Check page type to perform appropriate action
 	if( window.location.pathname.indexOf('/gp/offer-listing') === 0 ) {
 		usedNewPage();
+	} else if( window.location.pathname.indexOf('/s/') === 0 ) {	
+		searchPage();
 	} else {
 		productPage();
+	}
+	
+	function searchPage() {
+		var i = 0;
+		$('ul.rsltL').each(function() {
+			var listItems = $('li.mkp2', this);
+			if( listItems.length < 1 ) {
+				return;
+			}
+			var firstLi = $(listItems[0]);
+			var id = clarifyStem + i;
+			
+			// Add the button for getting the full price
+			firstLi.html( firstLi.html() + '<button id="' + id + '" style="font-style: italic; border: none; background: none; color: #888888; text-decoration: underline; font-size: 90%;">Get price inc. P&P</button>' );
+			
+			// Set up event listener for clicking the button
+			$('#' + id).click(function() { fetchSearchResultPrice($('#' + id)); });
+			
+			i++;
+		});
+	}
+	
+	function fetchSearchResultPrice(btnElem) {
+		function removeLoadingText() {
+			// Remove loading text if it's still there (will get removed by first successful AJAX call)
+			if( $('#' + btnId).length ) { 
+				$('#' + btnId).remove(); 
+			}
+		}
+	
+		var btnId = btnElem.attr('id');
+	
+		// Get all list items containing used and new prices
+		var listItems = $.merge([btnElem.parent()], btnElem.parent().siblings('li.mkp2'));
+		
+		// Set the button/link to loading text
+		btnElem.unbind('click');
+		btnElem.replaceWith( '<span id="' + btnId + '" style="font-style: italic; font-size: 90%; color: #888888;">Loading...</span>' );
+		
+		// Get the full price for each list item
+		$.each(listItems, function(index, elem) {
+			// If there's no link to a used and new page, remove the loading text and exit
+			if( $('a', elem).length !== 1 || usedNewUrlRegex.exec($('a', elem).attr('href')) === null ) {
+				removeLoadingText();
+				return;
+			}
+			
+			$.ajax({
+				url: $('a', elem).attr('href'),
+				dataType: 'html',
+				success: function(data) {
+					var parseResult = parseFirstRow(data);
+					if( parseResult !== null ) {
+						$('span.price', elem).html($('span.price', elem).html() + ' <i>(' + parseResult.currencySym + parseResult.totalPrice + ' inc. P&P)</i>');
+					}
+				},
+				complete: function() {
+					removeLoadingText();
+				}
+			});
+		});
 	}
 	
 	function usedNewPage() {
@@ -42,24 +109,21 @@ jQuery(document).ready(function($) {
 				success: function(data) {
 					// Get the total price from the first row of the used/new page
 					var fetchedUrl = this.url;
-					var page = $(data);
-					var row = $('tbody.result', page)[0];
-					var parseResult = parsePriceRow(row);
+					var parseResult = parseFirstRow(data);
 					
 					if( parseResult !== null ) {						
-						// Create the HTML to be appending to bare prices
+						// Create the HTML to append to bare prices
 						var incHtml = ' <i>(' + parseResult.currencySym + parseResult.totalPrice + ' inc. P&P)</i>';
 						
 						// Update the price on the product page to be the total price
 						$('span.price', olpCondLink).html($('span.price', olpCondLink).html() + incHtml);
 							
 						// Match the product code and condition
-						var urlMatchRegex = /^\/gp\/offer-listing\/(.+?)\/.+condition=([^&]+)$/;
-						var urlMatchFetched = urlMatchRegex.exec(fetchedUrl);
+						var urlMatchFetched = usedNewUrlRegex.exec(fetchedUrl);
 											
 						// Update the appropriate price in the central table, checking the product code and condition to determine the correct cell
 						$('div.cBoxInner td.tmm_olpLinks a').each(function() {
-							var urlMatchCell = urlMatchRegex.exec($(this).attr('href'));
+							var urlMatchCell = usedNewUrlRegex.exec($(this).attr('href'));
 							if( urlMatchFetched[1] === urlMatchCell[1] && urlMatchFetched[2] === urlMatchCell[2] ) {
 								$(this).html($(this).html() + incHtml);
 							}
@@ -69,7 +133,7 @@ jQuery(document).ready(function($) {
 						$('div#secondaryUsedAndNew div.mbcOlpLink').each(function() {
 							var olpLinkDiv = $(this);
 							$('a', olpLinkDiv).each(function() {
-								var urlMatchCell = urlMatchRegex.exec($(this).attr('href'));
+								var urlMatchCell = usedNewUrlRegex.exec($(this).attr('href'));
 								if( urlMatchFetched[1] === urlMatchCell[1] && urlMatchFetched[2] === urlMatchCell[2] ) {
 									$('span.price', olpLinkDiv).html($('span.price', olpLinkDiv).html() + incHtml);
 								} else if( urlMatchCell[2] === 'all' ) {
@@ -88,13 +152,24 @@ jQuery(document).ready(function($) {
 		});
 	}
 	
-		// Parse the price and currency symbol from a row in the used and new page table
+	// Convenience method to parse the first price row of the used and new page
+	function parseFirstRow(pageHtml) {
+		var page = $(pageHtml);
+		if( $('tbody.result', page).length < 1 ) {
+			return null;
+		}
+		var row = $('tbody.result', page)[0];
+		return parsePriceRow(row);
+	}
+	
+	// Parse the price and currency symbol from a row in the used and new page table
 	function parsePriceRow(row) {
-		// Skip rows without a delivery price (eg. Amazon fulfilled free delivery items)
+		// Skip rows without a price specified
 		if( $('span.price', row).html() === null ) {
 			return null;
 		}
 		
+		// In the case of items with no delivery price specified (eg. Amazon fulfilled) assume free delivery
 		if( $('span.price_shipping', row).html() === null ) {
 			var priceDelivery = 0;
 		}
