@@ -2,9 +2,9 @@
 // @name        Clarify Amazon Used and New Prices
 // @require     http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js
 // @namespace   471461
-// @description Update the price for 'used and new' items on the product page to include delivery/p&p. Shows each seller's full price (including delivery/p&p) on the Amazon 'used and new' tab. Shows real prices in search results.
+// @description Update the price for 'used and new' items on the product page to include delivery/p&p. Shows each seller's full price (including delivery/p&p) on the Amazon 'used and new' tab. Shows prices inc delivery in search results too.
 // @include     /^https?://www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/((gp/(offer-listing|product)/)|(.+?/dp/.+?/|dp)|s/).*$/
-// @version     2
+// @version     2.01
 // @grant none
 // ==/UserScript==
 
