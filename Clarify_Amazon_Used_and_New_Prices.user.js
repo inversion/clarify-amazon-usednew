@@ -178,13 +178,14 @@ jQuery(document).ready(function($) {
 		var currencySym = /(^\D+)/.exec($('span.price', row).html())[1];
 	
 		if( isDotFloats ) {
-			var stripRe = /[^\.\d]*/;			
+			var stripRe = /[^\.\d]*/g;		
+			console.log($('span.price', row).html().replace(stripRe, ''));
 			var price = parseFloat($('span.price', row).html().replace(stripRe, ''));
 			if( typeof priceDelivery === 'undefined' ) {
 				var priceDelivery = parseFloat($('span.price_shipping', row).html().replace(stripRe, ''));
 			}
 		} else {
-			var stripRe = /[^,\d]*/;
+			var stripRe = /[^,\d]*/g;
 			var price = parseFloat($('span.price', row).html().replace(stripRe, '').replace(',', '.'));
 			if( typeof priceDelivery === 'undefined' ) {
 				var priceDelivery = parseFloat($('span.price_shipping', row).html().replace(stripRe, '').replace(',', '.'));
