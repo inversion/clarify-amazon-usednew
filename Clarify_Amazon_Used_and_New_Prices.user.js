@@ -4,7 +4,7 @@
 // @namespace   471461
 // @description Update the price for 'used and new' items on the product page to include delivery/p&p. Shows each seller's full price (including delivery/p&p) on the Amazon 'used and new' tab. Shows prices inc delivery in search results too.
 // @include     /^https?://www\.amazon\.((com|ca|co\.uk)|(fr|de|it|es))/((gp/(offer-listing|product)/)|(.+?/dp/.+?/|dp)|s/).*$/
-// @version     2.01
+// @version     2.02
 // @grant none
 // ==/UserScript==
 
@@ -178,8 +178,7 @@ jQuery(document).ready(function($) {
 		var currencySym = /(^\D+)/.exec($('span.price', row).html())[1];
 	
 		if( isDotFloats ) {
-			var stripRe = /[^\.\d]*/g;		
-			console.log($('span.price', row).html().replace(stripRe, ''));
+			var stripRe = /[^\.\d]*/g;
 			var price = parseFloat($('span.price', row).html().replace(stripRe, ''));
 			if( typeof priceDelivery === 'undefined' ) {
 				var priceDelivery = parseFloat($('span.price_shipping', row).html().replace(stripRe, ''));
