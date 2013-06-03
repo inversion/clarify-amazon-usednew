@@ -105,6 +105,7 @@ jQuery(document).ready(function($) {
 				dataType: 'html',
 				success: function(data) {
 					var parseResult = parseFirstRow(data);
+                    updatePrice(elem, getPriceHtml(parseResult));
 				},
 				complete: function() {
 					removeLoadingText();
